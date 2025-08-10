@@ -14,20 +14,35 @@ const BoardFormSchema = z.object({
 export const addBoardSafeAction = actionUser
   .inputSchema(BoardFormSchema)
   .action(async ({ parsedInput: Input, ctx }) => {
+    const baseSlug = Input.title
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+
+    const slug = (await prisma.organization.findUnique({
+      where: { slug: baseSlug },
+    }))
+      ? `${baseSlug}-${crypto.randomUUID().split("-")[0]}`
+      : baseSlug;
+
     const organisation = await auth.api.createOrganization({
       body: {
         name: `${Input.title} Organization`,
-        slug: Input.title.toLowerCase().replace(/\s+/g, "-"),
-        userId: ctx.user.id,
+        slug,
+        keepCurrentActiveOrganization: false,
       },
       headers: await headers(),
     });
+
+    if (!organisation) {
+      throw new Error("error : something went wrong");
+    }
 
     const newBoard = await prisma.board.create({
       data: {
         title: Input.title,
         userId: ctx.user.id,
-        organizationId: organisation?.id,
+        organizationId: organisation.id,
         columns: {
           create: [
             { title: "To Do 📌", position: 1 },
@@ -39,5 +54,5 @@ export const addBoardSafeAction = actionUser
       include: { columns: true },
     });
     revalidatePath("/");
-    return newBoard;
+    return { newBoard, organisation };
   });

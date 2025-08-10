@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { addBoardSafeAction } from "./board.org.action";
 import { useAction } from "next-safe-action/hooks";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   title: z.string().min(2).max(50),
@@ -30,10 +31,14 @@ export default function BoardOrgForm() {
   });
 
   const { executeAsync } = useAction(addBoardSafeAction);
-
+  const router = useRouter();
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const board = await executeAsync(values);
+
     form.reset();
+    // router.push(`/${board.data?.organisation.slug}/${board.data?.newBoard.id}`);
+    router.refresh();
+    toast.success("success");
   }
 
   return (

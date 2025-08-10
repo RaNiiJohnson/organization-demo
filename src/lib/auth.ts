@@ -4,7 +4,18 @@ import prisma from "./prisma";
 import { organization } from "better-auth/plugins";
 
 export const auth = betterAuth({
-  plugins: [organization()],
+  plugins: [
+    organization({
+      organizationDeletion: {
+        disabled: false,
+        afterDelete: async ({ organization }, request) => {
+          await prisma.board.deleteMany({
+            where: { organizationId: organization.id },
+          });
+        },
+      },
+    }),
+  ],
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
@@ -15,11 +26,6 @@ export const auth = betterAuth({
     github: {
       clientId: process.env.GITHUB_CLIENT_ID as string,
       clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-    },
-    facebook: {
-      clientId: process.env.FACEBOOK_CLIENT_ID as string,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET as string,
-      scopes: ["email", "public_profile"],
     },
   },
 });

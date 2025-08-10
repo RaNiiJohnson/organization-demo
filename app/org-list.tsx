@@ -5,11 +5,8 @@ import { authClient } from "@/lib/auth-client";
 export default function OrgList() {
   const { data: organizations } = authClient.useListOrganizations();
 
+  const { data: activeOrganization } = authClient.useActiveOrganization();
   return (
-    <div>
-      {organizations?.map((org) => (
-        <p key={org.id}>{org.name}</p>
-      ))}
-    </div>
+    <div>{activeOrganization ? <p>{activeOrganization.name}</p> : null}</div>
   );
 }

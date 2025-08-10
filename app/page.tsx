@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
+import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { Trash2 } from "lucide-react";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import Link from "next/link";
 import BoardOrgForm from "./Board-org-form";
 import OrgList from "./org-list";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 
 export default async function Home() {
   const boards = await prisma.board.findMany();
@@ -54,6 +54,7 @@ export default async function Home() {
               <Trash2 className="w-4 h-4" />
             </Button>
           </form>
+          <OrgList />
         </div>
       ))}{" "}
       {/* {organization.map((org) => (

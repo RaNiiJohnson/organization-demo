@@ -61,9 +61,7 @@ model Board {
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   organizationId String?
-  // organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  organization Organization[]
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 model Organization {
   id          String       @id
@@ -79,10 +77,8 @@ model Organization {
   @@map("organization")
 
   boardId String?
-  
-  board   Board? @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
-  // boards Board[]
+  boards Board[]
 }
 
 model Member {

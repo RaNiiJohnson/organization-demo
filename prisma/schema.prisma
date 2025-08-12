@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// schema.prisma - Version mise à jour avec organisations
 
 generator client {
   provider = "prisma-client-js"
@@ -12,7 +8,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
+} 
 
 model User {
   id            String    @id
@@ -24,8 +20,9 @@ model User {
   updatedAt     DateTime
   sessions      Session[]
   accounts      Account[]
-  boards        Board[]
-
+  
+  createdBoards Board[]   @relation("BoardCreator")
+  
   members     Member[]
   invitations Invitation[]
 
@@ -33,92 +30,18 @@ model User {
   @@map("user")
 }
 
-
-model Column {
-  id       String @id @default(cuid())
-  title    String
-  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  boardId  String
-  tasks    Task[]
-  position Int
-}
-
-model Task {
-  id        String   @id @default(cuid())
-  content   String
-  column    Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  columnId  String
-  position  Int
-  createdAt DateTime @default(now())
-}
-
-model Board {
-  id        String   @id @default(cuid())
-  title     String
-  columns   Column[]
-  createdAt DateTime @default(now())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-}
-model Organization {
-  id          String       @id
-  name        String
-  slug        String?
-  logo        String?
-  createdAt   DateTime
-  metadata    String?
-  members     Member[]
-  invitations Invitation[]
-
-  @@unique([slug])
-  @@map("organization")
-
-  boardId String?
-
-  boards Board[]
-}
-
-model Member {
-  id             String       @id
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role           String
-  createdAt      DateTime
-
-  @@map("member")
-}
-
-model Invitation {
-  id             String       @id
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  email          String
-  role           String?
-  status         String
-  expiresAt      DateTime
-  inviterId      String
-  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
-
-  @@map("invitation")
-}
-
 model Session {
   id        String   @id
   expiresAt DateTime
   token     String
-  createdAt DateTime
+  createdAt DateTime 
   updatedAt DateTime
   ipAddress String?
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  activeOrganizationId String?
+  activeOrganizationId String? 
 
   @@unique([token])
   @@map("session")
@@ -152,4 +75,144 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+model Organization {
+  id          String       @id 
+  name        String       // Nom du workspace
+  slug        String?
+  logo        String?
+  createdAt   DateTime     @default(now())
+  metadata    String?
+  
+  // Relations
+  members     Member[]
+  invitations Invitation[]
+  boards      Board[]      // BOARDS appartiennent aux workspaces
+
+  @@unique([slug])
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       // owner, admin, member
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId]) // Un utilisateur ne peut être qu'une fois dans une org
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       // pending, accepted, rejected
+  expiresAt      DateTime 
+  inviterId      String
+  inviter        User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([email, organizationId]) // Une invitation par email par org
+  @@map("invitation")
+}
+
+model Board {
+  id             String        @id @default(cuid())
+  title          String
+  
+  organizationId String        
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  createdById    String        
+  createdBy      User          @relation("BoardCreator", fields: [createdById], references: [id])
+  
+  visibility     BoardVisibility @default(ORGANIZATION)
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  columns        Column[]
+  
+  boardMembers   BoardMember[] 
+  boardInvites   BoardInvite[] 
+
+  @@map("board")
+}
+
+
+model Column {
+  id       String @id @default(cuid())
+  title    String
+  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId  String
+  tasks    Task[]
+  position Int
+
+  @@map("column")
+}
+
+model Task {
+  id        String   @id @default(cuid())
+  content   String
+  column    Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  columnId  String
+  position  Int
+  createdAt DateTime @default(now())
+
+  @@map("task")
+}
+
+enum BoardVisibility {
+  PUBLIC      
+  ORGANIZATION 
+  PRIVATE     
+}
+
+enum BoardRole {
+  ADMIN  
+  EDITOR  
+  VIEWER 
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model BoardMember {
+  id      String    @id @default(cuid())
+  boardId String
+  userId  String
+  role    BoardRole @default(VIEWER)
+  
+  board   Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  
+  @@unique([boardId, userId])
+  @@map("board_members")
+}
+
+model BoardInvite {
+  id         String      @id @default(cuid())
+  boardId    String
+  email      String
+  role       BoardRole   @default(VIEWER)
+  token      String      @unique
+  status     InviteStatus @default(PENDING)
+  inviterId  String
+  expiresAt  DateTime
+  createdAt  DateTime    @default(now())
+  
+  board      Board       @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  
+  @@unique([boardId, email])
+  @@map("board_invites")
 }

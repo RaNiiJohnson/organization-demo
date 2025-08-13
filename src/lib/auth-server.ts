@@ -1,6 +1,7 @@
 import { auth } from "./auth"; // path to your Better Auth server instance
 import { headers } from "next/headers";
 import prisma from "./prisma";
+import { error } from "console";
 
 export const getSession = async () => {
   const session = await auth.api.getSession({
@@ -13,7 +14,11 @@ export const getSession = async () => {
 export const getUser = async () => {
   const session = await getSession();
 
-  return session?.user;
+  if (!session) {
+    throw new Error("error");
+  }
+
+  return session.user;
 };
 export const getUsers = async (organizationId: string) => {
   try {

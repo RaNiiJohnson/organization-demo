@@ -53,4 +53,4 @@ export type Organization = {
   metadata?: string | null;
   boardId?: string | null;
   members: Member[];
-} | null;
+};

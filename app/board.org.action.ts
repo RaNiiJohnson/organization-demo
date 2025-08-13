@@ -41,7 +41,7 @@ export const addBoardSafeAction = actionUser
     const newBoard = await prisma.board.create({
       data: {
         title: Input.title,
-        userId: ctx.user.id,
+        createdById: ctx.user.id,
         organizationId: organisation.id,
         columns: {
           create: [
